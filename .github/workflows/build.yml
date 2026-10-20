@@ -1,0 +1,41 @@
+name: Build APK
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Build release APK
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SlimLauncher-apk
+          path: app/build/outputs/apk/release/*.apk
+
+      # Publishes the APK as a GitHub Release so the Shield can download it with a plain URL:
+      # https://github.com/<you>/slim-launcher/releases/latest/download/app-release.apk
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "build-${{ github.run_number }}" \
+            app/build/outputs/apk/release/app-release.apk \
+            --title "Build ${{ github.run_number }}" \
+            --notes "Automated build of ${{ github.sha }}" \
+            --latest

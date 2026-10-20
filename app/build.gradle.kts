@@ -11,15 +11,26 @@ android {
         applicationId = "com.dom.slimlauncher"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        // Increases with every GitHub build so each one installs as an update.
+        versionCode = (System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInt()
+        versionName = "1.$versionCode"
+    }
+
+    // A fixed key committed to the repo (personal use only), so every build is signed the same
+    // way and updates install over the previous version.
+    signingConfigs {
+        create("personal") {
+            storeFile = file("slim.keystore")
+            storePassword = "android"
+            keyAlias = "slim"
+            keyPassword = "android"
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
-            // Sign release with the debug key so the optimized APK installs directly (personal use).
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("personal")
         }
     }
 

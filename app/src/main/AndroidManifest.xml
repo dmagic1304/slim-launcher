@@ -34,11 +34,17 @@
             android:launchMode="singleTask"
             android:resumeWhilePausing="true"
             android:stateNotNeeded="true">
+            <!-- Shows up as a normal app (apps row, installer "Open" button, Settings > Apps > Open). -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+            <!-- Lets it act as the Home screen. -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.HOME" />
                 <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
         </activity>
     </application>

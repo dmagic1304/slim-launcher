@@ -17,6 +17,7 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import android.view.Gravity
+import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewTreeObserver
@@ -49,6 +50,10 @@ class MainActivity : Activity() {
     private var byPkg: Map<String, AppEntry> = emptyMap()
     private val favEntries = mutableListOf<AppEntry>()
     private var pendingIconPkg: String? = null
+    private var spans = 4
+
+    /** Index in favEntries of the favorite being moved, or -1 when not in move mode. */
+    private var movingIndex = -1
     private var focusedOnce = false
 
     private val executor = Executors.newSingleThreadExecutor()
@@ -69,7 +74,7 @@ class MainActivity : Activity() {
         icons = IconLoader(this, store)
 
         val dm = resources.displayMetrics
-        val spans = (((dm.widthPixels / dm.density) - 96f) / 150f).toInt().coerceIn(3, 10)
+        spans = (((dm.widthPixels / dm.density) - 96f) / 150f).toInt().coerceIn(3, 10)
 
         favAdapter = AppAdapter(
             icons,
@@ -154,7 +159,13 @@ class MainActivity : Activity() {
     // Home button pressed while we are already running.
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
+        endMove()
         if (allApps.visibility == View.VISIBLE) showHome()
+    }
+
+    override fun onPause() {
+        endMove()
+        super.onPause()
     }
 
     @Suppress("DEPRECATION")
@@ -271,10 +282,7 @@ class MainActivity : Activity() {
         actions.add(Action("Rename") { askRename(entry) })
         actions.add(Action("Change icon") { chooseIcon(entry) })
         if (favIdx >= 0) {
-            if (!inAllApps && favIdx > 0) actions.add(Action("Move left") { moveFavorite(favIdx, -1) })
-            if (!inAllApps && favIdx < favEntries.size - 1) {
-                actions.add(Action("Move right") { moveFavorite(favIdx, 1) })
-            }
+            if (!inAllApps && favEntries.size > 1) actions.add(Action("Move") { startMove(favIdx) })
             actions.add(Action("Remove from favorites") { removeFavorite(favIdx, inAllApps) })
         } else {
             actions.add(Action("Add to favorites") { addFavorite(entry) })
@@ -313,12 +321,77 @@ class MainActivity : Activity() {
         showActions("Slim Launcher", listOf(Action(label) { openAccessibilitySettings() }))
     }
 
+    /**
+     * Opens Accessibility settings directly where the device supports it (the Shield doesn't);
+     * otherwise opens the main Settings screen and says where to go.
+     */
     private fun openAccessibilitySettings() {
-        try {
-            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-        } catch (e: Exception) {
-            toast("Open Settings > Device Preferences > Accessibility")
+        val where = "Go to Device Preferences > Accessibility > Slim Launcher Home button"
+        val direct = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+        val target = direct.resolveActivity(packageManager)
+        // On some TVs this resolves to the system "no app can do this" chooser, which is useless.
+        if (target != null && target.packageName != "android") {
+            try {
+                startActivity(direct.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                return
+            } catch (_: Exception) {
+                // fall through to main Settings
+            }
         }
+        try {
+            startActivity(Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            Toast.makeText(this, where, Toast.LENGTH_LONG).show()
+        } catch (_: Exception) {
+            Toast.makeText(this, "Open Settings. $where", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    // ---------------------------------------------------------------- move mode
+
+    private fun startMove(idx: Int) {
+        if (idx !in favEntries.indices) return
+        movingIndex = idx
+        favAdapter.movingPkg = favEntries[idx].pkg
+        favAdapter.refresh(favEntries[idx].pkg)
+        focusAfterLayout(favRv, idx)
+        Toast.makeText(this, "Use the arrows to move, OK or Back to place it", Toast.LENGTH_LONG).show()
+    }
+
+    private fun endMove() {
+        if (movingIndex < 0) return
+        val pkg = favAdapter.movingPkg
+        movingIndex = -1
+        favAdapter.movingPkg = null
+        if (pkg != null) favAdapter.refresh(pkg)
+        saveFavorites()
+    }
+
+    /** While moving, the arrows move the favorite instead of the focus. */
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (movingIndex < 0) return super.dispatchKeyEvent(event)
+        val delta = when (event.keyCode) {
+            KeyEvent.KEYCODE_DPAD_LEFT -> -1
+            KeyEvent.KEYCODE_DPAD_RIGHT -> 1
+            KeyEvent.KEYCODE_DPAD_UP -> -spans
+            KeyEvent.KEYCODE_DPAD_DOWN -> spans
+            KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER,
+            KeyEvent.KEYCODE_NUMPAD_ENTER, KeyEvent.KEYCODE_BACK -> 0
+            else -> return super.dispatchKeyEvent(event)
+        }
+        // Act on key-down only; swallow key-up too so OK doesn't also launch the app.
+        if (event.action != KeyEvent.ACTION_DOWN) return true
+        if (delta == 0) {
+            if (event.repeatCount == 0) endMove()
+            return true
+        }
+        val to = (movingIndex + delta).coerceIn(0, favEntries.size - 1)
+        if (to != movingIndex) {
+            moveFavorite(movingIndex, to - movingIndex)
+            movingIndex = to
+            favRv.scrollToPosition(to)
+            focusAfterLayout(favRv, to)
+        }
+        return true
     }
 
     // ---------------------------------------------------------------- favorites

@@ -23,8 +23,26 @@ class AppAdapter(
 
     private val list = ArrayList<AppEntry?>()
 
-    class VH(val root: LinearLayout, val icon: ImageView, val label: TextView) :
-        RecyclerView.ViewHolder(root)
+    /** Package of the favorite currently being moved (shown with an accent outline), or null. */
+    var movingPkg: String? = null
+
+    class VH(
+        val root: LinearLayout,
+        val icon: ImageView,
+        val label: TextView,
+        val focusBg: GradientDrawable,
+        val movingBg: GradientDrawable
+    ) : RecyclerView.ViewHolder(root) {
+        var moving = false
+
+        fun applyBackground(focused: Boolean) {
+            root.background = when {
+                moving -> movingBg
+                focused -> focusBg
+                else -> null
+            }
+        }
+    }
 
     fun submit(items: List<AppEntry?>) {
         list.clear()
@@ -90,13 +108,19 @@ class AppAdapter(
             setColor(Color.argb(51, 255, 255, 255))
             setStroke(dp(2), Color.argb(204, 255, 255, 255))
         }
+        val movingBg = GradientDrawable().apply {
+            cornerRadius = dp(14).toFloat()
+            setColor(Color.argb(77, 64, 156, 255))
+            setStroke(dp(3), Color.rgb(64, 156, 255))
+        }
+        val vh = VH(root, icon, label, focusBg, movingBg)
         root.setOnFocusChangeListener { v, hasFocus ->
-            v.background = if (hasFocus) focusBg else null
+            vh.applyBackground(hasFocus)
             val s = if (hasFocus) 1.08f else 1f
             v.animate().scaleX(s).scaleY(s).setDuration(100).start()
             v.translationZ = if (hasFocus) 10f else 0f
         }
-        return VH(root, icon, label)
+        return vh
     }
 
     override fun onBindViewHolder(h: VH, position: Int) {
@@ -108,6 +132,8 @@ class AppAdapter(
             h.label.text = labelOf(entry)
             h.icon.setImageDrawable(icons.get(entry))
         }
+        h.moving = entry != null && entry.pkg == movingPkg
+        h.applyBackground(h.root.hasFocus())
         h.root.setOnClickListener { onClick(list.getOrNull(h.bindingAdapterPosition)) }
         h.root.setOnLongClickListener {
             val e = list.getOrNull(h.bindingAdapterPosition)

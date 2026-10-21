@@ -11,7 +11,8 @@ One dependency (RecyclerView), no background services, no animations beyond a sm
   - App settings (opens the system app info page: clear cache/data, permissions, force stop)
   - Rename
   - Change icon (borrow another installed app's icon, or pick an image file)
-  - Move left / right (favorites only)
+  - Move (favorites only): the tile gets a blue outline; use the arrows to move it anywhere in the
+    grid, then press OK or Back to place it
   - Add to / remove from favorites
   - Reset name and icon
 - Example: long-press TizenTube > Rename > "YouTube", then Change icon > "Use another app's icon" > YouTube.
@@ -61,8 +62,8 @@ Like Projectivy's override, Slim Launcher has an optional accessibility service.
 launcher appears (after a reboot, or after pressing Home), it switches back to Slim Launcher. It only
 sees which app's window appeared and reads no screen content.
 
-1. In Slim Launcher, long-press the **All apps** tile and choose "Turn on Home button takeover".
-   (Or go to Settings > Device Preferences > Accessibility.)
+1. Go to Settings > Device Preferences > Accessibility. (Long-pressing the **All apps** tile and
+   choosing "Turn on Home button takeover" opens Settings and shows the path.)
 2. Enable **Slim Launcher Home button**.
 3. Test: press Home inside an app, then restart the Shield.
 

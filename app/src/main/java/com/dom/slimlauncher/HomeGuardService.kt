@@ -21,12 +21,30 @@ class HomeGuardService : AccessibilityService() {
         refreshHomePackages()
     }
 
+    /**
+     * Real launchers only. Settings and other system apps register "fallback" Home screens with a
+     * negative priority (used during boot); treating those as launchers would close dialogs such as
+     * the restart confirmation.
+     */
     private fun refreshHomePackages() {
         val home = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
         homePackages = packageManager.queryIntentActivities(home, 0)
+            .filter { it.priority >= 0 }
             .map { it.activityInfo.packageName }
-            .filter { it != packageName }
+            .filter { it != packageName && it !in NEVER_TAKE_OVER }
             .toSet()
+    }
+
+    companion object {
+        private val NEVER_TAKE_OVER = setOf(
+            "android",
+            "com.android.systemui",
+            "com.android.settings",
+            "com.android.tv.settings",
+            "com.android.provision",
+            "com.google.android.tungsten.setupwraith",
+            "com.nvidia.ota",
+        )
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {

@@ -17,7 +17,8 @@ class AppAdapter(
     private val icons: IconLoader,
     private val labelOf: (AppEntry) -> String,
     private val onClick: (AppEntry?) -> Unit,
-    private val onLongClick: (AppEntry, Int) -> Unit
+    private val onLongClick: (AppEntry, Int) -> Unit,
+    private val onLongClickTile: (() -> Unit)? = null
 ) : RecyclerView.Adapter<AppAdapter.VH>() {
 
     private val list = ArrayList<AppEntry?>()
@@ -110,7 +111,7 @@ class AppAdapter(
         h.root.setOnClickListener { onClick(list.getOrNull(h.bindingAdapterPosition)) }
         h.root.setOnLongClickListener {
             val e = list.getOrNull(h.bindingAdapterPosition)
-            if (e != null) onLongClick(e, h.bindingAdapterPosition)
+            if (e != null) onLongClick(e, h.bindingAdapterPosition) else onLongClickTile?.invoke()
             true
         }
     }

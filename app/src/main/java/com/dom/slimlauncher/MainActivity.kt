@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.AlertDialog
 import android.content.ActivityNotFoundException
 import android.content.BroadcastReceiver
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -74,7 +75,8 @@ class MainActivity : Activity() {
             icons,
             { e -> displayLabel(e) },
             onClick = { e -> if (e == null) showAllApps() else launch(e) },
-            onLongClick = { e, pos -> showMenu(e, pos, false) }
+            onLongClick = { e, pos -> showMenu(e, pos, false) },
+            onLongClickTile = { showLauncherMenu() }
         )
         allAdapter = AppAdapter(
             icons,
@@ -288,6 +290,35 @@ class MainActivity : Activity() {
             .setTitle(title)
             .setItems(actions.map { it.label }.toTypedArray()) { _, which -> actions[which].run() }
             .show()
+    }
+
+    // ---------------------------------------------------------------- launcher menu (All apps tile)
+
+    private fun guardEnabled(): Boolean {
+        val enabled = Settings.Secure.getString(
+            contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+        ) ?: return false
+        val cn = ComponentName(this, HomeGuardService::class.java)
+        return enabled.split(':').any {
+            it.equals(cn.flattenToString(), true) || it.equals(cn.flattenToShortString(), true)
+        }
+    }
+
+    private fun showLauncherMenu() {
+        val label = if (guardEnabled()) {
+            "Home button takeover is ON (open accessibility settings)"
+        } else {
+            "Turn on Home button takeover (opens accessibility settings)"
+        }
+        showActions("Slim Launcher", listOf(Action(label) { openAccessibilitySettings() }))
+    }
+
+    private fun openAccessibilitySettings() {
+        try {
+            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        } catch (e: Exception) {
+            toast("Open Settings > Device Preferences > Accessibility")
+        }
     }
 
     // ---------------------------------------------------------------- favorites

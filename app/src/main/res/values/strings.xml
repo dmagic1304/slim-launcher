@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Slim Launcher</string>
+    <string name="guard_label">Slim Launcher Home button</string>
+    <string name="guard_description">Brings Slim Launcher back when the Home button or a restart shows the stock launcher. It only notices which app is on screen and reads no content.</string>
 </resources>

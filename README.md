@@ -55,6 +55,21 @@ If the build fails, open the failed step and send me the red error text.
 3. Accept the debugging prompt on the TV the first time.
 4. "Slim Launcher" now shows up in your apps row. Open it once to check it works.
 
+## Home button takeover (recommended)
+
+Like Projectivy's override, Slim Launcher has an optional accessibility service. When the stock
+launcher appears (after a reboot, or after pressing Home), it switches back to Slim Launcher. It only
+sees which app's window appeared and reads no screen content.
+
+1. In Slim Launcher, long-press the **All apps** tile and choose "Turn on Home button takeover".
+   (Or go to Settings > Device Preferences > Accessibility.)
+2. Enable **Slim Launcher Home button**.
+3. Test: press Home inside an app, then restart the Shield.
+
+Limits: you may see the stock launcher flash for a moment before Slim Launcher appears. For a cleaner
+result, also disable the stock launcher with the adb command in the next section. If you ever use
+another launcher with its own override, turn one of them off, since two overrides fight each other.
+
 ## Making it the default (read before uninstalling Projectivy)
 
 The Shield has no "default launcher" setting. Projectivy usually takes over Home with its own

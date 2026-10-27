@@ -35,6 +35,25 @@ Allow "install unknown apps" for Downloader when prompted.
 
 If the build fails, open the failed step and send me the red error text.
 
+## Photos (full-resolution viewer)
+
+The APK also installs a separate **Photos** app. It shows JPG, PNG and WebP files at the TV's real
+output resolution (e.g. 3840x2160 on a 4K TV). Most Android TV photo apps draw at 1080p and
+upscale, which is why photos can look soft.
+
+- First open: allow access to photos when asked.
+- Browse internal storage (or a USB stick) and press OK on a photo.
+- In the viewer: Left/Right = previous/next, OK or Play/Pause = slideshow on/off (8 s per photo),
+  Up/Down = show the file name, Back = back to the folder.
+- The screen stays on (no screensaver) while a photo is shown. The TV's own auto-off timer still applies.
+- Phone photos are rotated correctly using their EXIF orientation.
+
+Copy photos to the Shield with Send Files to TV, a USB stick, or adb:
+
+    adb push "C:\path\to\photo.jpg" /sdcard/Pictures/
+
+If permission was refused: `adb shell pm grant com.dom.slimlauncher android.permission.READ_EXTERNAL_STORAGE`
+
 ## Background video (themes)
 
 A muted video loop can play behind the launcher, under a dark overlay so icons stay readable.

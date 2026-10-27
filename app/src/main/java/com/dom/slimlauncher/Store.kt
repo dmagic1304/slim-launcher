@@ -27,7 +27,9 @@ fun queryApps(pm: PackageManager, selfPkg: String): List<AppEntry> {
         val query = Intent(Intent.ACTION_MAIN).addCategory(category)
         for (ri in pm.queryIntentActivities(query, 0)) {
             val ai = ri.activityInfo
-            if (ai.packageName == selfPkg || found.containsKey(ai.packageName)) continue
+            // Hide the launcher itself, but keep its other apps (Photos) in the list.
+            if (ai.packageName == selfPkg && ai.name == MainActivity::class.java.name) continue
+            if (found.containsKey(ai.packageName)) continue
             found[ai.packageName] = AppEntry(
                 pkg = ai.packageName,
                 component = ComponentName(ai.packageName, ai.name),

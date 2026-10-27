@@ -31,6 +31,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import java.io.File
 import java.util.concurrent.Executors
 
 class MainActivity : Activity() {
@@ -55,6 +56,10 @@ class MainActivity : Activity() {
     /** Index in favEntries of the favorite being moved, or -1 when not in move mode. */
     private var movingIndex = -1
     private var focusedOnce = false
+
+    private lateinit var background: ThemeBackground
+    private var themeKey: String? = null
+    private val idleRunnable = Runnable { background.pauseIdle() }
 
     private val executor = Executors.newSingleThreadExecutor()
     private val ui = Handler(Looper.getMainLooper())
@@ -131,10 +136,19 @@ class MainActivity : Activity() {
             visibility = View.GONE
         }
 
+        background = ThemeBackground(this).apply {
+            onError = {
+                toast("Couldn't play the background video")
+                setVideo(null)
+            }
+        }
+
         val root = FrameLayout(this)
+        root.addView(background, FrameLayout.LayoutParams(match, match))
         root.addView(home, FrameLayout.LayoutParams(match, match))
         root.addView(allApps, FrameLayout.LayoutParams(match, match))
         setContentView(root)
+        applyTheme()
 
         registerReceiver(pkgReceiver, IntentFilter().apply {
             addAction(Intent.ACTION_PACKAGE_ADDED)
@@ -151,6 +165,8 @@ class MainActivity : Activity() {
     }
 
     override fun onDestroy() {
+        ui.removeCallbacks(idleRunnable)
+        background.stop()
         unregisterReceiver(pkgReceiver)
         executor.shutdown()
         super.onDestroy()
@@ -163,9 +179,25 @@ class MainActivity : Activity() {
         if (allApps.visibility == View.VISIBLE) showHome()
     }
 
+    override fun onResume() {
+        super.onResume()
+        applyTheme() // picks up videos copied to the Shield while the launcher was in the background
+        background.start()
+        userActivity()
+    }
+
     override fun onPause() {
         endMove()
+        ui.removeCallbacks(idleRunnable)
+        background.stop() // frees the video decoder for whatever app opens next
         super.onPause()
+    }
+
+    /** Any remote key wakes the background; a few minutes without one freezes it. */
+    private fun userActivity() {
+        background.resumeIdle()
+        ui.removeCallbacks(idleRunnable)
+        ui.postDelayed(idleRunnable, IDLE_MS)
     }
 
     @Suppress("DEPRECATION")
@@ -313,12 +345,70 @@ class MainActivity : Activity() {
     }
 
     private fun showLauncherMenu() {
-        val label = if (guardEnabled()) {
+        val bg = currentThemeFile()?.name ?: if (store.themeChoice() == "") "off" else "none found"
+        val guard = if (guardEnabled()) {
             "Home button takeover is ON (open accessibility settings)"
         } else {
             "Turn on Home button takeover (opens accessibility settings)"
         }
-        showActions("Slim Launcher", listOf(Action(label) { openAccessibilitySettings() }))
+        showActions(
+            "Slim Launcher",
+            listOf(
+                Action("Background: $bg") { showThemePicker() },
+                Action(guard) { openAccessibilitySettings() }
+            )
+        )
+    }
+
+    // ---------------------------------------------------------------- background videos
+
+    /** App-specific storage: no permissions needed, and `adb push` can write here. */
+    private fun themeDir(): File? = getExternalFilesDir("themes")
+
+    private fun themeFiles(): List<File> =
+        themeDir()?.listFiles { f -> f.isFile && f.extension.lowercase() in VIDEO_EXTENSIONS }
+            ?.sortedBy { it.name.lowercase() }
+            ?: emptyList()
+
+    private fun currentThemeFile(): File? {
+        val files = themeFiles()
+        return when (val choice = store.themeChoice()) {
+            null -> files.firstOrNull() // never chosen: use the first video found
+            "" -> null // switched off
+            else -> files.firstOrNull { it.name == choice }
+        }
+    }
+
+    /** Applies the chosen video; does nothing if it hasn't changed. */
+    private fun applyTheme() {
+        val f = currentThemeFile()
+        val key = f?.let { "${it.absolutePath}:${it.lastModified()}" }
+        if (key == themeKey) return
+        themeKey = key
+        background.setVideo(f)
+    }
+
+    private fun showThemePicker() {
+        val files = themeFiles()
+        if (files.isEmpty()) {
+            AlertDialog.Builder(this)
+                .setTitle("No background videos found")
+                .setMessage(
+                    "Copy .mp4 videos into:\n${themeDir()?.absolutePath ?: "(storage unavailable)"}" +
+                        "\n\nThen open this menu again."
+                )
+                .setPositiveButton("OK", null)
+                .show()
+            return
+        }
+        val names = files.map { it.name } + "Off (plain background)"
+        AlertDialog.Builder(this)
+            .setTitle("Background")
+            .setItems(names.toTypedArray()) { _, i ->
+                store.setThemeChoice(if (i < files.size) files[i].name else "")
+                applyTheme()
+            }
+            .show()
     }
 
     /**
@@ -368,6 +458,7 @@ class MainActivity : Activity() {
 
     /** While moving, the arrows move the favorite instead of the focus. */
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.action == KeyEvent.ACTION_DOWN) userActivity()
         if (movingIndex < 0) return super.dispatchKeyEvent(event)
         val delta = when (event.keyCode) {
             KeyEvent.KEYCODE_DPAD_LEFT -> -1
@@ -547,5 +638,7 @@ class MainActivity : Activity() {
 
     companion object {
         private const val REQ_ICON = 1
+        private const val IDLE_MS = 5 * 60 * 1000L
+        private val VIDEO_EXTENSIONS = setOf("mp4", "m4v", "webm", "mkv")
     }
 }

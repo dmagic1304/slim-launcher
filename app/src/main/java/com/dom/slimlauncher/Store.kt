@@ -49,6 +49,16 @@ class Store(context: Context) {
     // pkg -> "file" (own PNG in iconDir) or "app:<other.package>" (borrow another app's icon)
     private val iconSrc = JSONObject(sp.getString("icons", "{}") ?: "{}")
 
+    /**
+     * Background video choice: null = never chosen (use the first video found), "" = off,
+     * otherwise the file name inside the themes folder.
+     */
+    fun themeChoice(): String? = sp.getString("theme", null)
+
+    fun setThemeChoice(name: String?) {
+        sp.edit().putString("theme", name).apply()
+    }
+
     fun hasFavorites() = sp.contains("favs")
 
     fun favorites(): List<String> {

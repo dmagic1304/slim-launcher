@@ -35,6 +35,29 @@ Allow "install unknown apps" for Downloader when prompted.
 
 If the build fails, open the failed step and send me the red error text.
 
+## Background video (themes)
+
+A muted video loop can play behind the launcher, under a dark overlay so icons stay readable.
+
+1. Put one or more `.mp4` videos (1080p, 30-60 seconds, made to loop, is ideal) on your PC.
+2. Copy them to the Shield (connect adb first):
+
+       adb shell mkdir -p /sdcard/Android/data/com.dom.slimlauncher/files/themes
+       adb push halloween.mp4 /sdcard/Android/data/com.dom.slimlauncher/files/themes/
+
+3. Open Slim Launcher. If you never picked one, it uses the first video it finds. To choose, or to
+   switch it off: long-press the **All apps** tile > **Background**.
+
+To change the theme for a season, push another video and pick it from that menu. No update needed.
+
+Prefer clips with no audio track. The video is muted, but a clip that has audio still opens an
+audio stream, which can wake a soundbar/receiver. To strip audio from a clip on your PC:
+`ffmpeg -i in.mp4 -an -c:v copy out.mp4`
+
+Resource use: playback stops the moment you open an app (the video decoder is released for that
+app), freezes on the current frame after 5 minutes with no remote key pressed, and resumes on the
+next key press. If a video won't play, the plain background shows instead.
+
 ## Build (Android Studio)
 
 1. Install Android Studio and open this folder (`SlimLauncher`). Accept any SDK / Gradle downloads when it syncs.

@@ -52,6 +52,18 @@ Copy photos to the Shield with Send Files to TV, a USB stick, or adb:
 
     adb push "C:\path\to\photo.jpg" /sdcard/Pictures/
 
+If a photo in a normal folder doesn't show up (Android sometimes hides files from apps), put it in
+the app's own folder instead. It's listed first as **Slim Launcher photos (always visible)**:
+
+    adb push "C:\path\to\photo.jpg" /sdcard/Android/data/com.dom.slimlauncher/files/photos/
+
+To move a file that's already on the Shield (e.g. in Download), run `adb shell`, then:
+
+    cp "/sdcard/Download/photo.png" /sdcard/Android/data/com.dom.slimlauncher/files/photos/
+    exit
+
+Note: that folder is deleted if the app is ever uninstalled.
+
 If permission was refused: `adb shell pm grant com.dom.slimlauncher android.permission.READ_EXTERNAL_STORAGE`
 
 ## Background video (themes)

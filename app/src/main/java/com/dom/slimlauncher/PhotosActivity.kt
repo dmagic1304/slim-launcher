@@ -208,9 +208,15 @@ class PhotosActivity : Activity(), SurfaceHolder.Callback {
     @Suppress("DEPRECATION")
     private fun internalRoot(): File = Environment.getExternalStorageDirectory()
 
+    /**
+     * The app's own folder. Android always lets an app read its own folder, with no permission and
+     * no media index needed, so photos copied here always show up.
+     */
+    private fun inboxDir(): File? = getExternalFilesDir("photos")
+
     private fun openStart() {
         val saved = prefs.getString("dir", null)?.let { File(it) }
-        show(if (saved != null && saved.isDirectory) saved else internalRoot())
+        show(if (saved != null && saved.isDirectory) saved else null)
     }
 
     private fun show(d: File?) {
@@ -219,6 +225,7 @@ class PhotosActivity : Activity(), SurfaceHolder.Callback {
         val entries = ArrayList<Entry>()
         if (d == null) {
             pathView.text = "Storage"
+            inboxDir()?.let { entries.add(Entry.Folder(it, "Slim Launcher photos (always visible)")) }
             entries.add(Entry.Folder(internalRoot(), "Internal storage"))
             File("/storage").listFiles()
                 ?.filter { it.isDirectory && it.name != "emulated" && it.name != "self" && it.canRead() }
@@ -258,6 +265,7 @@ class PhotosActivity : Activity(), SurfaceHolder.Callback {
         val d = dir ?: return finish()
         val parent = d.parentFile
         val atVolumeRoot = d.absolutePath == internalRoot().absolutePath ||
+            d.absolutePath == inboxDir()?.absolutePath ||
             parent == null || parent.absolutePath == "/storage" || parent.absolutePath == "/storage/emulated"
         show(if (atVolumeRoot) null else parent)
     }
